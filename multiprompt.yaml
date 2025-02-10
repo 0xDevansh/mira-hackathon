@@ -1,0 +1,68 @@
+version: "1.4.0"
+ 
+metadata:
+  flow_type: "compound"
+  name: "promptgpt"
+  description: "A prompt engineer to get the best results from LLMs"
+  author: "dvenom"
+  tags: [chatbot]
+  private: false
+ 
+inputs:
+  question:
+    type: string
+    description: "Your question"
+    required: true
+    example: "How does Random Forests regression work?"
+  res_level:
+    type: string
+    description: "What level of explanation do you want? Select one of: child, highschooler, undergraduate, postgraduate"
+    required: true
+    example: "undergraduate"
+  
+ 
+workflow:
+  prompt_generate_flow:
+    type: "custom"
+    inputs:
+      question: ${inputs.question}
+      res_level: ${inputs.res_level}
+    model:
+      provider: "anthropic"
+      name: "claude-3.5-sonnet"
+    dataset:
+      source: 'dvenom/prompt-guidelines'
+    prompt: |
+      ###Instructions###
+      You are a senior machine learning engineer specialising in prompting large language models.
+      Create a complete and precise prompt for the request given in backticks. You will use the generated prompt to a different LLM model.
+      Try to use most of the provided guidelines in the dataset.
+      Your reponse should be only the prompt written in second person. Do not start with "Here is a prompt:" or any similar lines.
+      The intended audience is a {res_level}.
+      Don't ask for practice questions in the end if not asked for by the user.
+      If the user provides text or code that needs to be processed, ensure that you pass it directly at the end of the prompt, under a heading of ###Input###.
+      ###Request###
+      `{question}`
+ 
+  response_flow:
+    type: "custom"
+    depends_on: [prompt_generate_flow]
+    inputs:
+      prompt_text: ${prompt_generate_flow.output}
+    model:
+      provider: "anthropic"
+      name: "claude-3.5-sonnet"
+    prompt: ${prompt_text}
+ 
+output:
+  value:
+    - ${prompt_generate_flow.output}
+    - ${response_flow.output}
+  
+readme: |
+  An advanced LLM chain that first generates an optimised prompt before executing it, reducing the time and effort needed to ask questions from an LLM.
+  This flow is powered by Claude 3.5 Sonnet
+
+  ## Inputs
+  - question: Your question
+  - res_level: The level of response (child, highschooler, undergraduate, postgraduate)
